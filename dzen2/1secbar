@@ -56,7 +56,7 @@ while :;  do
     # if mpd isn't running, display padded module with info
     if [ "$STATE" = "" ]; then 
         outputinfo "Daemon stopped..." "^fg($SYMCOL)Daemon stopped...^fg()" 25
-        outputinfo "stopped..." "^fg($SYMCOL)stopped...^fg()" 22
+        outputinfo "..." "^fg($SYMCOL)...^fg()" 22
     else # mpd is running
 	ARTIST=$(mpc -f %artist% | head -n 1) # grab artist name
 	STRLEN=$(expr length "$ARTIST") # restrict length

@@ -1,6 +1,6 @@
 (setf *screen-mode-line-format* 
       (list 
-            "[^B%n^b] %w | hello"
+            "[^B%n^b] %w | "
 	    ; create two 
             '(:eval (run-shell-command "date" t)) 
             '(:eval (run-shell-command "echo" t))))

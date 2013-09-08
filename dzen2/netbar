@@ -86,7 +86,7 @@ while :;  do
     # switch between displaying if, dl and ul (2 secs each)
     case $COUNT in
 
-	[0-1]) outputinfo "If: $CON" "^fg($TAGCOL)If:^fg() ^fg($TEXTCOL)$CON" 14
+	[0-1]) outputinfo "If: $CON" "^fg($TAGCOL)If:^fg() ^fg($INFOCOL)$CON" 14
 	       ;;
 	[2-3]) outputinfo "Dl: $TOTALDOWN"gB"" "^fg($TAGCOL)Dl:^fg() ^fg($INFOCOL)$TOTALDOWN^fg($SYMCOL)gB" 14
 	       ;;
