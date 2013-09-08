@@ -1,0 +1,6 @@
+exec ~/stumpwm/dzen2/1secbar &
+exec ~/stumpwm/dzen2/sysbar &
+exec ~/stumpwm/dzen2/netbar &
+exec ~/stumpwm/dzen2/drivebar &
+exec ~/stumpwm/dzen2/volbar &
+exec ~/stumpwm/dzen2/fillerbar &
