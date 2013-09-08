@@ -14,13 +14,13 @@ SYMCOL="#9d9d9d"
 # bar color
 BGCOL="#303030"
 # bar text color
-FGCOL=""
+FGCOL="#707070"
 #wrapper color
 WRAPCOL="#1a1a1b"
 
 # corners for module
-LCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-left.xbm)"
-RCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-right.xbm)"
+LCOR="^i(/home/cas/stumpwm/dzen2/icons/myicons/corner-left.xbm)"
+RCOR="^i(/home/cas/stumpwm/dzen2/icons/myicons/corner-right.xbm)"
 
 # pads text with spaces
 # syntax: pad uint
@@ -101,12 +101,8 @@ do
 
 
     # echo modules
-#    outputinfo "$ROOTTAG $ROOTG "gB"" "^fg($TAGCOL)$ROOTTAG^fg() ^fg($INFOCOL)$ROOTG^fg()^fg($SYMCOL)gB^fg()" 13
-#    outputinfo "$HOMETAG $HOMEG "gB"" "^fg($TAGCOL)$HOMETAG^fg() ^fg($INFOCOL)$HOMEG^fg()^fg($SYMCOL)gB^fg()" 13
-
     ## output for external storage depends on state (most likely only relevant for external hdds)
-  
-    #takes usbg ($1) and usbtag ($2) as args
+    ## takes usbg ($1) and usbtag ($2) as args
     ## N/A is colored as symbol
     function outputdrive {
         if [ "$1" == "N/A" ]; then
@@ -142,4 +138,4 @@ do
 
     sleep $INFOUPDATE;
 
-done | dzen2 -x 1100 -y 1034 -h 12 -w 400 -ta l -fg "#000001" -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"
+done | dzen2 -x 1100 -y 1034 -h 12 -w 400 -ta l -fg $FGCOL -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"

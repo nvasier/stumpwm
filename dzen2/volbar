@@ -12,59 +12,52 @@ SYMCOL="#9d9d9d"
 # bar color
 BGCOL="#303030"
 # bar text color
-FGCOL=""
+FGCOL="#707070"
 #wrapper color
 WRAPCOL="#1a1a1b"
 
+# icons
+LCOR="^i(/home/cas/stumpwm/dzen2/icons/myicons/corner-left.xbm)"
+RCOR="^i(/home/cas/stumpwm/dzen2/icons/myicons/corner-right.xbm)"
 
+# update every second
 UPDATE=1
-TEXTCOL="#9d9d9d"
 
-VOLUME_ICONCOL="#606060"
-SEPCOL="#000001"
-ICON="^i(.dwm/dzen2/icons/vol-hi.xbm)"
-ICON2="^i(.dwm/dzen2/icons/vol-mute.xbm)"
-LCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-left.xbm)"
-RCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-right.xbm)"
+# for volume bar
+BARLENGTH=50
 
-COUNT=0
-BARLENGTH=33
-
+# to prevent being overdrawn by bar to the left
 sleep 4
+
 while :;  do
 
     # Volume
-	VOL=`amixer sget Master | grep Mono: | awk '{print $4 $6}' | sed -e 's/\%//g' | sed -e 's/\[//' | sed -e 's/\]//' ` 	
-	ON=`echo $VOL | grep "on"` 
-	if [ "$ON" != "" ]; then 
-		ON=`echo $VOL | sed -e 's/\[on\]//'`;
-		VOL="$ON";
-        ACTIVE=$(($VOL / 3))
+    VOL=`amixer -M sget Master | grep Mono: | awk '{print $4 $6}' | sed -e 's/\%//g' | sed -e 's/\[//' | sed -e 's/\]//' ` 	
+    ON=`echo $VOL | grep "on"` 
+    if [ "$ON" != "" ]; then 
+	VOL=`echo $VOL | sed -e 's/\[on\]//'`;
+        ACTIVE=$(($VOL / 2))
         INACTIVE=$(($BARLENGTH-$ACTIVE))
+        # label
 	echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)VOL:^bg()^fg($LABELWRAPCOL)$RCOR"
+        # module
         echo -n "^fg($WRAPCOL)$LCOR^fg()" # left corner
-	echo -n "^bg($WRAPCOL)^fg(#1874cd)^r("$ACTIVE"x6)^fg(#000)^r("$INACTIVE"x6)^fg($TEXTCOL) $VOL^fg()^bg()" # main area
+        echo -n "^bg($WRAPCOL)^fg(#1874cd)^r("$ACTIVE"x6)^fg($BGCOL)^r("$INACTIVE"x6)^fg($INFOCOL) $VOL^fg()^bg()" # main area
 	echo    "^fg($WRAPCOL)$RCOR" # right corner
-	else
-	ON=`echo $VOL | sed -e 's/\[off\]//'`;
-	VOL=$ON;
-        ACTIVE=$(($VOL / 3))
+    else # change color of 
+	VOL=`echo $VOL | sed -e 's/\[off\]//'`;
+        ACTIVE=$(($VOL / 2))
         INACTIVE=$(($BARLENGTH-$ACTIVE))
+        # label
         echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)VOL:^bg()^fg($LABELWRAPCOL)$RCOR"
-        echo -n "^fg($LABELWRAPCOL)$LCOR^fg()" # left corner
-	echo -n "^bg($WRAPCOL)^fg($WRAPCOL)^r("$ACTIVE"x6)^fg(#000)^r("$INACTIVE"x6)^fg($TEXTCOL) $VOL^fg()^bg()" # main area
+        # module
+        echo -n "^fg($WRAPCOL)$LCOR^fg()" # left corner
+        echo -n "^bg($WRAPCOL)^fg(#707070)^r("$ACTIVE"x6)^fg($BGCOL)^r("$INACTIVE"x6)^fg($INFOCOL) $VOL^fg()^bg()" # main area
 	echo    "^fg($WRAPCOL)$RCOR" # right corner
-	fi
+    fi
 
-
     
-    
-    
-    
-    #^fg($TEXTCOL)$VOL^fg()  " 
-
-	
     sleep $UPDATE
 
 
-done | dzen2 -x 1420  -y 1034 -h 12 -w 260 -ta r -fg $SEPCOL -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"
+done | dzen2 -x 1420  -y 1034 -h 12 -w 260 -ta r -fg $FGCOL -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"
