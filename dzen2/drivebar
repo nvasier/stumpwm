@@ -1,0 +1,145 @@
+#!/bin/bash
+
+# sysbar.sh
+
+# for labels such as MPD, SYS ...
+LABELCOL="#fffafa"
+LABELWRAPCOL="#333332"
+# for all dynamic information read from system
+INFOCOL="#c0c0c0"
+# for tags such as cpu, mem ...
+TAGCOL="#deb887"
+# for symbols such as mB, % ...
+SYMCOL="#9d9d9d"
+# bar color
+BGCOL="#303030"
+# bar text color
+FGCOL=""
+#wrapper color
+WRAPCOL="#1a1a1b"
+
+# corners for module
+LCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-left.xbm)"
+RCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-right.xbm)"
+
+# pads text with spaces
+# syntax: pad uint
+function pad { 
+    C=0
+    while [ "$C" -lt $1 ]; do
+	echo -n " "
+	C=$(( $C + 1 ))
+    done
+    echo -n "^bg()"
+}
+
+# echo modules with content, uses pad() to keep
+# syntax: ouputinfo stringAsItWillAppear stringFormatted moduleLength
+function outputinfo {
+        STRLEN=$(expr length "$1" )
+	PAD=$(( $3 - $STRLEN ))
+	echo -n "^fg($WRAPCOL)$LCOR^fg()^bg($WRAPCOL)$2^fg()"
+	pad $PAD
+	echo -n "^bg()^fg($WRAPCOL)$RCOR"
+}
+
+# prevents bar from being overdrawn
+sleep 3
+
+# paths
+ROOTPATH="/dev/sda3"
+HOMEPATH="dev/sda4"
+USB1PATH="/dev/sdb1"
+USB2PATH="/dev/sdc1"
+
+# tags
+ROOTTAG="Root:"
+HOMETAG="Home:"
+USB1TAG="Usb1:"
+USB2TAG="Usb2:"
+
+# Seconds between changing info in wrapper
+INFOUPDATE=3
+# DO NOT EDIT (used as counter for changing info in wrappers)
+COUNT=0
+
+# Number of infoupdates before reading sysinfo
+INFOUPDATESBEFORESYSUPDATE=10
+# DO NOT EDIT (used as counter for sys update)
+COUNT2=0
+
+while true;
+do
+    # read sysinfo?
+    if [ "$COUNT2" -eq "0" ]; then
+	# register remaining storage space
+	ROOTK=$(df | grep $ROOTPATH | awk '{print $4}')
+	HOMEK=$(df | grep $HOMEPATH | awk '{print $4}')
+	USB1K=$(df | grep $USB1PATH | awk '{print $4}')
+	USB2K=$(df | grep $USB2PATH | awk '{print $4}')
+        COUNT2="$INFOUPDATESBEFORESYSUPDATE"
+    else COUNT2=$(( $COUNT2 -1 ))
+    fi
+    
+    # convert to gB with 3 decimals
+    ROOTG=$(echo "($ROOTK / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+    HOMEG=$(echo "($HOMEK / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+
+    # assume not connected if 0k
+    if [ $(expr length "$USB1K") != 0 ]; then
+	USB1G=$(echo "($USB1K / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+    else USB1G="N/A"
+    fi
+    if [ $(expr length "$USB2K") != 0 ]; then
+	USB2G=$(echo "($USB2K / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+    else USB2G="N/A"
+    fi
+
+
+    # print label for SYS-bar
+    echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)HDD:^bg()^fg($LABELWRAPCOL)$RCOR"
+
+
+    # echo modules
+#    outputinfo "$ROOTTAG $ROOTG "gB"" "^fg($TAGCOL)$ROOTTAG^fg() ^fg($INFOCOL)$ROOTG^fg()^fg($SYMCOL)gB^fg()" 13
+#    outputinfo "$HOMETAG $HOMEG "gB"" "^fg($TAGCOL)$HOMETAG^fg() ^fg($INFOCOL)$HOMEG^fg()^fg($SYMCOL)gB^fg()" 13
+
+    ## output for external storage depends on state (most likely only relevant for external hdds)
+  
+    #takes usbg ($1) and usbtag ($2) as args
+    ## N/A is colored as symbol
+    function outputdrive {
+        if [ "$1" == "N/A" ]; then
+	    outputinfo "$2 $1"    "^fg($TAGCOL)$2^fg() ^fg($SYMCOL)$1^fg()^fg($SYMCOL)^fg()" 13
+	else
+	    outputinfo "$2 $1"gB"" "^fg($TAGCOL)$2^fg() ^fg($INFOCOL)$1^fg()^fg($SYMCOL)gB^fg()" 13
+	fi
+	}
+
+    # wrapper 1
+    case "$COUNT" in
+	"0") outputdrive $ROOTG $ROOTTAG
+	    ;;
+	"1") outputdrive $HOMEG $HOMETAG
+	    ;;
+    esac
+    
+    case "$COUNT" in
+	"0") outputdrive $USB1G $USB1TAG
+	    ;;
+	"1") outputdrive $USB2G $USB2TAG
+	    ;;
+    esac
+
+    if [ "$COUNT" = "1" ]; then
+	    COUNT=0
+    else COUNT=$(($COUNT + 1))
+    fi
+
+
+    # newline, as required by dzen2
+    echo ""
+
+    sleep $INFOUPDATE;
+
+done | dzen2 -x 1100 -y 1034 -h 12 -w 400 -ta l -fg "#000001" -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"

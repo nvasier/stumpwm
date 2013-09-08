@@ -1,0 +1,45 @@
+#!/bin/bash
+
+UPDATE=10
+TEXTCOL="#aaaaaa"
+ICONCOL="#707070"
+SEPCOL="#d2b9d3"
+COUNT=0
+
+sleep 3
+
+while :;  do
+	
+    # Drive Space
+	ROOTD=`df -h / | grep / | awk '{print $4}' | sed -e 's/G/GB/g'`
+	ROOTD2=`df -h / | grep / | awk '{print $5}' | sed -e 's/%//g'`
+    ROOTD2=$(($ROOTD2 / 3))
+    INACR=$((33-$ROOTD2))
+	HOMED=`df -h | grep /dev/sda4 | awk '{print $4}' | sed -e 's/G/GB/g'`
+	HOMED2=`df -h | grep /dev/sda4 | awk '{print $5}' | sed -e 's/%//g'`
+    HOMED2=$(($HOMED2 / 3))
+    INAC=$((33-$HOMED2))
+#	XSTOR=`df -h /dev/sdb1 | grep dev | awk '{print $4}' | sed -e 's/G/GB/g'`
+#	XSTOR2=`df -h /dev/sdb1 | grep dev | awk '{print $5}' | sed -e 's/%//g'`
+#    XSTOR2=$(($XSTOR2 / 3))
+ #   INACX=$((33-$XSTOR2))
+#	if [ "$XSTOR" == "" ]; then XSTOR="N/A"; fi	
+
+	#Battery
+	STATE=$(acpi | awk '{print $3}')
+	TIME=$(acpi | awk '{print $4}' | sed 's/,//')
+	if [ "$STATE"  == "Discharging," ]; 
+	then BATTICON="^i(/home/cas/.xmonad/dzen2/icons/power-bat2.xbm)";
+	else BATTICON="^i(/home/cas/.xmonad/dzen2/icons/power-ac.xbm)";
+	fi
+
+	# Date
+	DATE=$(date +"%a %b %d %H:%M")
+
+	
+
+echo -n " ^fg($ICONCOL)root:^fg()^fg(#339933)^fg($TEXTCOL) $ROOTD^fg()    ^fg($ICONCOL)home:^fg()^fg(#339933)^fg($TEXTCOL) $HOMED^fg()    ^fg($ICONCOL)xstor:^fg()^fg(#339933)^fg($TEXTCOL) $XSTOR^fg()   ::"
+echo -n "  ^fg($ICONCOL)$BATTICON^fg()^fg($TEXTCOL)$TIME^fg()  ^fg($SEPCOL)::^fg()"
+echo "  ^fg($TEXTCOL)$DATE^fg()  "
+	sleep $UPDATE
+done | dzen2 -x 1260 -y 0 -h 12 -w 420 -ta r -fg $SEPCOL -bg "#000000" -fn "-*-dejavu sans mono-medium-r-*-*-9-*-*-*-*-*-*-*"

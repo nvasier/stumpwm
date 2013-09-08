@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# for labels such as MPD, SYS ...
+LABELCOL="#fffafa"
+LABELWRAPCOL="#333332"
+# for all dynamic information read from system
+INFOCOL="#C0C0C0"
+# for tags such as cpu, mem ...
+TAGCOL="#deb887"
+# for symbols such as mB, % ...
+SYMCOL="#9d9d9d"
+# bar color
+BGCOL="#303030"
+# bar text color
+FGCOL=""
+#wrapper color
+WRAPCOL="#1a1a1b"
+
+
+UPDATE=1
+
+LCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-left.xbm)"
+RCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-right.xbm)"
+ICON="^i(/home/cas/.xmonad/dzen2/icons/mpd.xbm)"
+PLAY="^i(/home/cas/.dwm/dzen2/icons/dzen_bitmaps/play.xbm)"
+PAUSE="^i(/home/cas/.dwm/dzen2/icons/dzen_bitmaps/pause.xbm)"
+COUNT=0
+
+function pad { 
+    C=0
+    while [ "$C" -lt $1 ]; do
+	echo -n " "
+	C=$(( $C + 1 ))
+    done
+    echo -n "^bg()"
+}
+
+function outputinfo {
+        STRLEN=$(expr length "$1 $2" )
+	PAD=$(( 25 - $STRLEN ))
+	echo -n "^fg($WRAPCOL)$LCOR^bg($WRAPCOL)^fg($TAGCOL)$1 ^fg($INFOCOL)$2^fg()"
+	pad $PAD
+	echo -n "^bg()^fg($WRAPCOL)$RCOR"
+}
+
+while :;  do
+
+    sleep $UPDATE;
+    echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)MPD:^bg()^fg($LABELWRAPCOL)$RCOR" # main label
+    
+    # check if daemon is running
+    STATE=$(mpc | grep "\[")
+
+    # if mpd isn't running, display padded module with info
+    if [ "$STATE" = "" ]; then 
+	echo -n "^fg($WRAPCOL)$LCOR^bg($WRAPCOL)^fg($WRAPCOL)Stopped...^fg()"
+	pad 60 # padding that makes module same length as when mpd is running
+	echo  "^bg()^fg($WRAPCOL)$RCOR"
+
+    else # mpd is running
+	ARTIST=$(mpc -f %artist% | head -n 1) # grab artist name
+
+	ALBUM=$(mpc -f %album% | head -n 1 | sed -e 's/é/e/') # grab album name
+	STRLEN=$(expr length "$ALBUM") # restrict length
+	if [ $STRLEN  -gt 14 ]; then
+		ALBUM="${ALBUM:0:14}..."
+	fi
+
+	TRACK=$(mpc -f %track% | head -n 1) # grab track nr
+	TITLE=`mpc -f %title% | head -n 1 | sed -e 's/\[//' | sed -e 's/\]//' | sed -e 's/é/e/'` # grab song title
+	SONG="$TRACK - $TITLE" # combine
+	STRLEN=$(expr length "$SONG") # restrict length (+1 for shorter label)
+	if [ $STRLEN  -gt 14 ]; then
+		SONG="${SONG:0:14}..."
+	fi
+
+	POS=$(mpc | grep "\[" | awk '{print $3}' | sed 's/\/.*//')
+	LENGTH=$(mpc | grep "\[" | awk '{print $3}' | sed 's/.*\///')
+        ACTIVE=`mpc | grep '\[' | awk '{print $4}' | sed 's/(//'| sed 's/%)//'`
+	INACTIVE=$((100-$ACTIVE))
+	
+	
+        case "$COUNT" in
+
+	"0")    outputinfo "Artist:" "$ARTIST"	
+		;;
+	"1")    outputinfo "Artist:" "$ARTIST"
+		;;
+	"2")    outputinfo "Album:" "$ALBUM"
+		;;
+	"3")    outputinfo "Album:" "$ALBUM"
+		;;
+	"4")    outputinfo "Song:" "$SONG" 
+		;;
+	"5")    outputinfo "Song:" "$SONG" 
+		;;
+	esac
+
+	if [ "$COUNT" = "5" ]; then
+	    COUNT=0
+        else
+	    COUNT=$(($COUNT + 1))
+	fi
+
+	# pause/playing and progress bar
+	STATE=$(mpc | grep "\[" | awk '{print $1}') #check if paused
+        if [ "$STATE" = "[paused]" ]; then
+            echo -n "^fg($WRAPCOL)$LCOR^fg($SYMCOL)^bg($WRAPCOL)paused^fg($WRAPCOL)   ^bg()"
+        else
+            echo -n "^fg($WRAPCOL)$LCOR^fg($SYMCOL)^bg($WRAPCOL)playing^fg($WRAPCOL)  ^bg()"
+        fi
+#	echo "^bg(#1a1a1a)^fg($INFOCOL)$POS  ^fg(#1874cd)^r($(($ACTIVE))x4)^fg(#000)^r("$INACTIVE"x4)^fg()^fg($INFOCOL)  $LENGTH ^fg()^bg()^fg(#1a1a1a)$RCOR"
+	echo "^bg($WRAPCOL)^fg($INFOCOL)$POS ^fg($SYMCOL)/^fg($INFOCOL) $LENGTH ^bg()^fg($WRAPCOL)$RCOR"
+
+    fi    
+
+
+done | dzen2 -x 0 -y 1034 -h 12 -w 600 -ta l -fg $SEPCOL -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"

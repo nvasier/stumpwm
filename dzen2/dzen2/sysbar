@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# sysbar.sh
+
+# corners for module
+LCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-left.xbm)"
+RCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-right.xbm)"
+
+# pads text with spaces
+# syntax: pad uint
+function pad { 
+    C=0
+    while [ "$C" -lt $1 ]; do
+	echo -n " "
+	C=$(( $C + 1 ))
+    done
+    echo -n "^bg()"
+}
+
+# echo modules with content, uses pad() to keep
+# syntax: ouputinfo stringAsItWillAppear stringFormatted moduleLength
+function outputinfo {
+        STRLEN=$(expr length "$1" )
+	PAD=$(( $3 - $STRLEN ))
+	echo -n "^fg(#242424)$LCOR^fg()^bg(#242424)$2^fg()"
+	pad $PAD
+	echo -n "^bg()^fg(#242424)$RCOR"
+}
+
+# registers time and date of boot
+UPTIME=$(uptime -s | sed -e 's/-/ /g' | awk '{print $4" "$3"-"$2"-"$1}')
+
+# prevents bar from being overdrawn
+sleep 1
+
+
+while true;
+do
+
+    # find app currently using most cpu
+    GRABLEADER=$(top -b -n 1 | awk '/PID/{getline; print $9" "$12}')
+    # register cpu consum. of leader
+    LEADERUSAGE=$(echo $GRABLEADER | awk '{print $1}')
+    # register leader, restrict stringlen.
+    LEADER=$(echo $GRABLEADER | awk '{print $2}')
+    STRLEN=$(expr length "$LEADER")
+    if [ $STRLEN  -gt 8 ]; then
+	LEADER="${LEADER:0:8}..."
+    fi
+    
+    # register load avg.
+    LOAD=$(uptime |  sed 's/.*://; s/ //; s/,//g')
+
+    # register current ram usage
+    MEM=$(free -m | grep "buffers/cache" | awk '{print $3}')
+
+    # print label for SYS-bar
+    echo -n "^fg(#000000)$LCOR^bg(#000000)^fg(#fff)SYS:^bg()^fg(#000000)$RCOR"
+
+    # echo modules
+    outputinfo "$LOAD" "^fg(#aaaaaa)$LOAD" 12
+    outputinfo "Cpu: $LEADER @ $LEADERUSAGE"%"" "Cpu: ^fg(#aaaaaa)$LEADER^fg() @ ^fg(#aaaaaa)$LEADERUSAGE^fg()%" 25
+    outputinfo "Mem: $MEM"mB"" "Mem: ^fg(#aaaaaa)$MEM^fg()mB" 12
+    outputinfo "Boot: $UPTIME" "Boot: ^fg(#aaaaaa)$UPTIME" 26
+
+    # newline, as required by dzen2
+    echo ""
+
+    sleep 3; # update in 3 secs
+
+done | dzen2 -x 485 -y 1148 -h 12 -w 670 -ta l -fg "#707070" -bg "#000000" -fn "-*-dejavu sans mono-medium-r-*-*-10-*-*-*-*-*-*-*"

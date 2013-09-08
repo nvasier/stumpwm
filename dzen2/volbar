@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# for labels such as MPD, SYS ...
+LABELCOL="#fffafa"
+LABELWRAPCOL="#333332"
+# for all dynamic information read from system
+INFOCOL="#C0C0C0"
+# for tags such as cpu, mem ...
+TAGCOL="#deb887"
+# for symbols such as mB, % ...
+SYMCOL="#9d9d9d"
+# bar color
+BGCOL="#303030"
+# bar text color
+FGCOL=""
+#wrapper color
+WRAPCOL="#1a1a1b"
+
+
+UPDATE=1
+TEXTCOL="#9d9d9d"
+
+VOLUME_ICONCOL="#606060"
+SEPCOL="#000001"
+ICON="^i(.dwm/dzen2/icons/vol-hi.xbm)"
+ICON2="^i(.dwm/dzen2/icons/vol-mute.xbm)"
+LCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-left.xbm)"
+RCOR="^i(/home/cas/.xmonad/dzen2/icons/myicons/corner-right.xbm)"
+
+COUNT=0
+BARLENGTH=33
+
+sleep 4
+while :;  do
+
+    # Volume
+	VOL=`amixer sget Master | grep Mono: | awk '{print $4 $6}' | sed -e 's/\%//g' | sed -e 's/\[//' | sed -e 's/\]//' ` 	
+	ON=`echo $VOL | grep "on"` 
+	if [ "$ON" != "" ]; then 
+		ON=`echo $VOL | sed -e 's/\[on\]//'`;
+		VOL="$ON";
+        ACTIVE=$(($VOL / 3))
+        INACTIVE=$(($BARLENGTH-$ACTIVE))
+	echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)VOL:^bg()^fg($LABELWRAPCOL)$RCOR"
+        echo -n "^fg($WRAPCOL)$LCOR^fg()" # left corner
+	echo -n "^bg($WRAPCOL)^fg(#1874cd)^r("$ACTIVE"x6)^fg(#000)^r("$INACTIVE"x6)^fg($TEXTCOL) $VOL^fg()^bg()" # main area
+	echo    "^fg($WRAPCOL)$RCOR" # right corner
+	else
+	ON=`echo $VOL | sed -e 's/\[off\]//'`;
+	VOL=$ON;
+        ACTIVE=$(($VOL / 3))
+        INACTIVE=$(($BARLENGTH-$ACTIVE))
+        echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)VOL:^bg()^fg($LABELWRAPCOL)$RCOR"
+        echo -n "^fg($LABELWRAPCOL)$LCOR^fg()" # left corner
+	echo -n "^bg($WRAPCOL)^fg($WRAPCOL)^r("$ACTIVE"x6)^fg(#000)^r("$INACTIVE"x6)^fg($TEXTCOL) $VOL^fg()^bg()" # main area
+	echo    "^fg($WRAPCOL)$RCOR" # right corner
+	fi
+
+
+    
+    
+    
+    
+    #^fg($TEXTCOL)$VOL^fg()  " 
+
+	
+    sleep $UPDATE
+
+
+done | dzen2 -x 1420  -y 1034 -h 12 -w 260 -ta r -fg $SEPCOL -bg $BGCOL -fn "-*-dejavu sans mono-extralight-r-*-*-9-*-*-*-*-*-*-*"

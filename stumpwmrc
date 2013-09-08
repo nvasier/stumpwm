@@ -1,0 +1,86 @@
+(setf *screen-mode-line-format* 
+      (list 
+            "[^B%n^b] %w | hello"
+	    ; create two 
+            '(:eval (run-shell-command "date" t)) 
+            '(:eval (run-shell-command "echo" t))))
+
+(setf *mode-line-timeout* 1)
+(setf *mode-line-position* :bottom)
+(setf *mode-line-background-color* "gray10")
+; to make source code updates take effect
+(toggle-mode-line (current-screen) (current-head))
+(enable-mode-line (current-screen) (current-head) t)
+(set-font "-*-terminus-medium-r-normal-*-12-*-*-*-*-*-iso10646-1")
+
+;=================
+; KEYBINDINGS
+;=================
+; group movement
+(dotimes (i 9)
+  (unless (eq i 10) ; F0 is non-existant and will error.
+    (define-key *top-map* (kbd (format nil "M-~a" i)) (format nil "gselect ~a" i))))
+(define-key *top-map* (kbd "M-Tab")
+  "gother")
+
+; alsa
+(define-key *top-map* (kbd "C-Up")
+  "exec amixer -q sset Master 3+")
+(define-key *top-map* (kbd "C-Down")
+  "exec amixer -q sset Master 3-")
+(define-key *top-map* (kbd "C-Left")
+  "exec amixer -q sset Master toggle")
+; mpc
+(define-key *top-map* (kbd "C-Right")
+  "exec mpc -q toggle")
+; terminal
+(define-key *root-map* (kbd "C-c")
+  "exec urxvt")
+; firefox
+(defcommand firefox () ()
+  "Run or switch to Firefox."
+  (run-or-raise "firefox" '(:class "Firefox")))
+(define-key *top-map* (kbd "C-Home") 
+  "firefox")
+;emacs
+(defcommand emacs () ()
+  "Run or switch to Firefox."
+  (run-or-raise "emacs" '(:title "emacs")))
+(define-key *top-map* (kbd "C-Insert") 
+  "emacs")
+
+;=================
+; WINDOWS
+;=================
+(setf *message-window-gravity* :center)
+(setf *input-window-gravity* :center)
+(setf *normal-border-width* 1)
+(setf *window-border-style* :tight)
+(set-focus-color "cyan")
+(set-unfocus-color "black")
+
+;=================
+; 
+;=================
+(run-commands 
+ "gnewbg term"
+ "gnewbg edit" 
+ "gnewbg docs" 
+ "gnewbg mpdc"
+ "gnewbg vids"
+ "gnewbg uldl"
+ "gnewbg misc")
+
+;; Clear rules
+(clear-window-placement-rules)
+
+(define-frame-preference "Default"
+  ;; frame raise lock (lock AND raise == jumpto)
+  (0 t   t :class "Firefox"))
+(define-frame-preference "term"
+  ;; frame raise lock (lock AND raise == jumpto)
+)
+(define-frame-preference "edit"
+  ;; frame raise lock (lock AND raise == jumpto)
+  (0 t   t :title "emacs")
+  (1 t   t :title "URXVT"))
