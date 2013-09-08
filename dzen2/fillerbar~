@@ -1,4 +1,0 @@
-while true
-do
-    sleep 9001
-done | dzen2 -y 12 -h 4  -bg "#000000" -w 1680
