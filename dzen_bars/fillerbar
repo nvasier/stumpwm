@@ -1,0 +1,4 @@
+while true
+do
+    sleep 9001
+done | dzen2 -y 1030 -h 4  -bg "#303030" -w 1680| dzen2 -y 1050 -h 4 -bg "#303030"

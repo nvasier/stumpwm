@@ -1,0 +1,449 @@
+#!/bin/bash
+
+#####################################################
+# TODO
+#
+# - make output functions run update
+# - make centered modules possible
+# - volume bar "graphics"
+#
+#=====================================================================================
+# BAR PROPERTIES
+#=====================================================================================
+
+FONTSIZE=9
+FONT="-*-dejavu sans mono-medium-r-*-*-$FONTSIZE-*-*-*-*-*-*-*"
+
+ZENHEIGHT=12
+ZENWIDTH=1400
+
+#=====================================================================================
+# COLORS AND ICONS
+#=====================================================================================
+
+# icons
+LCOR="^i(/home/cas/stumpwm/dzen_bars/icons/corner-left.xbm)"  # left corner
+RCOR="^i(/home/cas/stumpwm/dzen_bars/icons/corner-right.xbm)" # right corner
+DOWNICON="^i(/home/cas/stumpwm/dzen_bars/icons/down.xbm)" # down speed
+UPICON="^i(/home/cas/stumpwm/dzen_bars/icons/up.xbm)" # up speed
+
+# colors
+LABELCOL="#000000"     # for labels such as MPD, SYS ...
+LABELWRAPCOL="#1e87ff" # for label wrapper
+INFOCOL="#C0C0C0"      # for all dynamic information read from system
+TAGCOL="#deb887"       # for tags such as cpu, mem ...
+SYMCOL="#9d9d9d"       # for symbols such as mB, %, @ ...
+WRAPCOL="#1a1a1b"      # wrapper color
+BGCOL="#303030"        # bar background color
+FGCOL=$INFOCOL         # bar foreground color
+# mpd colors
+MPDSTATECOL="#404040" # for mpd state
+STATECOL="#404040"    # for playing/paused
+# sys colors
+CPUHOTCOL="#cc6600" # for hot cpu
+CPUFRYINGCOL="red"  # for very hot cpu
+
+#====================================================================================
+# MODULE WIDTHS
+#====================================================================================
+
+# mpd
+WINFO=26 # music info (truncates info it it doesn't fit)
+WSTATE=7 # playing/paused state (7 fits 'playing')
+WPROG=12 # position and length of song (12 fits 'mm:ss / mm:ss')
+
+# sys
+WLEADER=25  # leader module truncates leader if if doesn't fit
+WLOAD=""    # load avg. module ("x.xx x.xx x.xx" = contant)
+WCPUTEMP="" # cpu temp module ("xxC" = constant)
+WMEM=10     # mem module ("Ram: xxxxmB" = 11 chars)
+
+#====================================================================================
+# UPDATE
+#====================================================================================
+SYSUPDATE=3 # seconds between reading sys info
+HDDUPDATE=30 # seconds between reading hdd-data
+
+
+#====================================================================================
+# HELPER FUNCTIONS
+#====================================================================================
+
+# loop prints space until specified limit is reached
+## used by: outputmodule()
+function pad { 
+    C=0
+    while [ "$C" -lt $1 ]; do
+	echo -n " "
+	C=$(( $C + 1 ))
+    done
+    echo -n "^bg()"
+}
+
+# ouputs module in wrapper with corners
+## usage: outputmodule <stringAsItWillAppear> <stringWithFormattingCharacters> <moduleWidth>
+function outputmodule {
+        STRLEN=$(expr length "$1" ) # get strlen of <stringAsItWillAppear>
+	PAD=$(( $3 - $STRLEN )) # chars that need to be padded to preserve module width
+	echo -n "^fg($WRAPCOL)$LCOR^fg()^bg($WRAPCOL)$2^fg()" # print left corner and formatted string
+	pad $PAD
+	echo -n "^bg()^fg($WRAPCOL)$RCOR" # print right corner
+}
+
+# outputs label in wrapper
+## usage: outputlabel <label>
+function outputlabel {
+    echo -n "^fg($LABELWRAPCOL)$LCOR^bg($LABELWRAPCOL)^fg($LABELCOL)$1^bg()^fg($LABELWRAPCOL)$RCOR"
+}
+
+#====================================================================================
+# MPD
+#====================================================================================
+ARTIST="" # name of artist/band
+ALBUM=""  # name of album
+TRACK=""  # song number on album
+TITLE=""  # song title
+POS=""    # current position in song
+LENGTH="" # length of song
+STATE=""  # playing/paused
+
+# used for switching displayed music info
+COUNT=0
+
+# read state of mpd, grab and clean data
+function update_mpd_data {
+    
+    # stores media info in variables
+    function grab_mpd_data {
+	ARTIST=$(mpc -f %artist% | head -n 1) # grab artist name
+	ALBUM=$(mpc -f %album% | head -n 1) # grab album name
+	TRACK=$(mpc -f %track% | head -n 1) # grab track nr
+	TITLE=$(mpc -f %title% | head -n 1) # grab song title
+	POS=$(mpc | grep "\[" | awk '{print $3}' | sed 's/\/.*//') 
+	LENGTH=$(mpc | grep "\[" | awk '{print $3}' | sed 's/.*\///')
+	STATE=$(mpc | grep "\[" | awk '{print $1}') #check if paused
+	
+    }
+
+    # remove unwanted chars
+    function clean_mpd_data {
+	ARTIST=$(echo $ARTIST | sed 's/[^0-9a-zA-Z, :?]*//g')
+	ALBUM=$(echo $ALBUM |  sed 's/[^0-9a-zA-Z, .:?]*//g')
+	TITLE=$(echo $TITLE |  sed 's/[^0-9a-zA-Z, .:?]*//g')
+	STATE=$(echo $STATE |  sed 's/[^0-9a-zA-Z, .:?]*//g')
+    }
+
+    # output mppd down
+    function output_mpd_down {
+	outputmodule "Daemon stopped..." "^fg($SYMCOL)Daemon stopped...^fg()" 25
+	outputmodule "..." "^fg($SYMCOL)...^fg()" 22
+    }
+
+    MPD=$(mpc | grep "\[") # check daemon state
+    if [ "$MPD" = "" ]; then # not running
+	MPDRUNNING=0
+    else # mpd is running
+	MPDRUNNING=1
+	grab_mpd_data # update data
+	clean_mpd_data # clean data
+    fi
+}
+
+# ouput modules with info
+function output_mpd_data {
+    
+    outputlabel "MPD:"
+    if [ $MPDRUNNING -eq 1 ]; then
+	# takes tag and info as args
+	function formatted_mpd_info_output {
+	    INFO="$2"
+	    if  [ $(expr length "$1 $INFO") -gt $WINFO ]; then
+		MAXLEN=$(expr $WINFO - $(expr length "$1"))
+		INFO="${INFO:0:$((MAXLEN-4))}..."
+	    fi
+	    outputmodule "$1 $INFO" "^fg($TAGCOL)$1^fg() ^fg($INFOCOL)$INFO^fg()" $WINFO
+	}
+	case $COUNT in
+	    [0-1])    formatted_mpd_info_output "Artist:" "$ARTIST"
+		;;
+	    [2-3])    formatted_mpd_info_output "Album:" "$ALBUM"
+		;;
+	    [4-5])    formatted_mpd_info_output "Song:" "$TRACK - $TITLE"
+		;;
+	esac
+        # reset counter after 5 loops
+	if [ "$COUNT" = "5" ]; then
+	    COUNT=0
+        else
+	    COUNT=$(($COUNT + 1))
+	fi
+
+	outputmodule "$STATE" "$STATE" $WSTATE
+	outputmodule "$POS / $LENGTH" "$POS ^fg($SYMCOL)/^fg() $LENGTH" $WPROG
+    else
+	output_mpd_down
+    fi
+}
+
+#====================================================================================
+# SYS
+#====================================================================================
+LEADER=""      # name off process currently using most cpu
+LEADERUSAGE="" # cpu usage of leader
+LOAD=""        # load averages
+CPUTEMP=""     # processor temperature
+MEM=""         # current ram usage
+
+# counter for sys update
+SYSCOUNTER=$SYSUPDATE # starts at the same value as SYSUPDATE to perform update on bar start
+
+function update_system_data {
+    if [ "$SYSCOUNTER" -eq "$SYSUPDATE" ]; then
+	# find app currently using most cpu
+	GRABLEADER=$(top -b -n 1 | awk '/PID/{getline; print $9" "$12}')
+	# register cpu consum. of leader
+	LEADERUSAGE=$(echo $GRABLEADER | awk '{print $1}')
+	# register leader, restrict stringlen.
+	LEADER=$(echo $GRABLEADER | awk '{print $2}')
+	# register load avg.
+	LOAD=$(uptime |  sed 's/.*://; s/ //; s/,//g')
+	# register current ram usage
+	MEM=$(free -m | grep "buffers/cache" | awk '{print $3}')
+	# register cpu temp
+	CPUTEMP=$(sensors | grep "Core 1" | awk '{print $3}' | sed -e 's/+//g' | sed -e 's/\..*//')
+	SYSCOUNTER=0
+    else
+	SYSCOUNTER=$(( $SYSCOUNTER + 1 ))
+    fi
+}
+
+function output_system_data {
+    
+    outputlabel "SYS:"
+
+    function formatted_system_leader_output {
+	LEADERSTRING="Cpu: $LEADER @ $LEADERUSAGE"%""
+	if  [ $(expr length "$LEADERSTRING") -gt $WLEADER ]; then
+	    MAXLEN=$(expr $WLEADER - $(expr length "$LEADERSTRING"))
+	    LEADER="${LEADER:0:$((MAXLEN-4))}..."
+	fi
+	outputmodule "Cpu: $LEADER @ $LEADERUSAGE"%"" "^fg($TAGCOL)Cpu:^fg() $LEADER ^fg($SYMCOL)@^fg() $LEADERUSAGE^fg($SYMCOL)%^fg()" $WLEADER
+    }
+    
+    function formatted_system_cputemp_output {
+	if [ "$CPUTEMP" -lt 60 ]; then 
+	    outputmodule "$CPUTEMP"C"" "$CPUTEMP"C"" $WCPUTEMP
+	elif [[ "$CPUTEMP" -gt 49 && "$CPUTEMP" -lt 85 ]]; then 
+	    outputmodule "$CPUTEMP"C"" "^fg($CPUHOTCOL)$CPUTEMP"C"^fg()" $WCPUTEMP
+	else 
+	    outputmodule "$CPUTEMP"C"" "^fg($CPUFRYINGCOL)$CPUTEMP"C"^fg()" $WCPUTEMP
+	fi
+
+    }
+
+    formatted_system_leader_output
+    outputmodule "$LOAD" "$LOAD" $WLOAD
+    formatted_system_cputemp_output
+    outputmodule "Mem: $MEM"mB"" "^fg($TAGCOL)Mem:^fg() $MEM^fg($SYMCOL)mB^fg()" $WMEM
+}
+
+#====================================================================================
+# NET
+#====================================================================================
+
+# used to switch between displaying con, tul, tdl
+VAR=0
+READCOUNTER=1
+RXR=1
+TXR=1
+
+function update_net_data {
+
+    ETH0=$(ip -o addr | grep "eth0.*inet " | awk '{print $2}')
+    WLAN0=$(ip -o addr | grep "wlan0.*inet " | awk '{print $2}')
+    if [ "$ETH0" != "" ]; then
+	CON="eth0"
+    elif [ "$WLAN0" != "" ]; then 
+	CON="wlan0"
+    else 
+	CON="offline"; 
+    fi
+    
+    if [ "$READCOUNTER" -eq 1 ]; then
+	RXB=`cat /sys/class/net/$CON/statistics/rx_bytes`
+	TXB=`cat /sys/class/net/$CON/statistics/tx_bytes`
+	TOTALDOWN=$(echo "($RXB) / 1024 / 1024 / 1024" | bc -l | xargs printf "%.3f")
+	TOTALUP=$(echo "($TXB) / 1024 / 1024 / 1024" | bc -l | xargs printf "%.3f")
+	RXR=$(echo "( $RXB - $RXBN ) / 1024" | bc -l | xargs printf "%.1f")
+	TXR=$(echo "( $TXB - $TXBN ) / 1024" | bc -l | xargs printf "%.1f")
+	READCOUNTER=0
+    else
+	RXBN=`cat /sys/class/net/$CON/statistics/rx_bytes`
+	TXBN=`cat /sys/class/net/$CON/statistics/tx_bytes`
+	RXR=$(echo "( $RXBN - $RXB ) / 1024" | bc -l | xargs printf "%.1f")
+	TXR=$(echo "( $TXBN - $TXB ) / 1024" | bc -l | xargs printf "%.1f")
+	READCOUNTER=1
+    fi
+
+}
+
+function output_net_data {    
+    outputlabel "NET:"
+    
+    # switch between displaying if, dl and ul (2 secs each)
+    case $VAR in
+
+	[0-1]) outputmodule "If: $CON" "^fg($TAGCOL)If:^fg() ^fg($INFOCOL)$CON" 14
+	       ;;
+	[2-3]) outputmodule "Dl: $TOTALDOWN"gB"" "^fg($TAGCOL)Dl:^fg() ^fg($INFOCOL)$TOTALDOWN^fg($SYMCOL)gB" 14
+	       ;;
+	[4-5]) outputmodule "Ul: $TOTALUP"gB"" "^fg($TAGCOL)Ul:^fg() ^fg($INFOCOL)$TOTALUP^fg($SYMCOL)gB" 14
+	       ;;
+    esac
+    if [ "$VAR" = "5" ]; then
+	VAR=0
+    else
+	VAR=$(( $VAR + 1 ))
+    fi
+    
+    #ignore icon in stringasitwillappear, as it has enough spacing...
+    outputmodule "$RXR"kB/s"" "^fg($TAGCOL)$DOWNICON^fg() ^fg($INFOCOL)$RXR^fg()^fg($SYMCOL)kB/s^fg()" 11
+
+    outputmodule "$TXR"kB/s"" "^fg($TAGCOL)$UPICON^fg() ^fg($INFOCOL)$TXR^fg()^fg($SYMCOL)kB/s^fg()" 11
+}
+
+
+#====================================================================================
+# HDD
+#====================================================================================
+
+# paths
+ROOTPATH="/dev/sda3"
+HOMEPATH="dev/sda4"
+USB1PATH="/dev/sdb1"
+USB2PATH="/dev/sdc1"
+
+# tags
+ROOTTAG="Root:"
+HOMETAG="Home:"
+USB1TAG="Usb1:"
+USB2TAG="Usb2:"
+
+# DO NOT EDIT (used as counter for changing info in wrappers)
+HDDCASECOUNTER=0
+# DO NOT EDIT (used as counter for hdd data reading)
+HDDREADCOUNTER=0
+
+function update_hdd_data {
+    # read sysinfo?
+    if [ "$HDDREADCOUNTER" -eq "0" ]; then
+	# register remaining storage space
+	ROOTK=$(df | grep $ROOTPATH | awk '{print $4}')
+	HOMEK=$(df | grep $HOMEPATH | awk '{print $4}')
+	USB1K=$(df | grep $USB1PATH | awk '{print $4}')
+	USB2K=$(df | grep $USB2PATH | awk '{print $4}')
+        HDDREADCOUNTER="$HDDUPDATE"
+    else
+	HDDREADCOUNTER=$(( $HDDREADCOUNTER -1 ))
+    fi
+    
+    # convert to gB with 3 decimals
+    ROOTG=$(echo "($ROOTK / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+    HOMEG=$(echo "($HOMEK / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+
+    # assume not connected if 0k
+    if [ $(expr length "$USB1K") != 0 ]; then
+	USB1G=$(echo "($USB1K / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+    else 
+	USB1G="N/A"
+    fi
+    if [ $(expr length "$USB2K") != 0 ]; then
+	USB2G=$(echo "($USB2K / 1024 / 1024)" | bc -l | xargs printf "%.1f")
+    else
+	USB2G="N/A"
+    fi
+}
+
+function output_hdd_data {
+
+    outputlabel "HDD:"
+    # echo modules
+    ## output for external storage depends on state (most likely only relevant for external hdds)
+    ## N/A is colored as symbol
+    function outputdrive {
+        if [ "$1" == "N/A" ]; then
+	    outputmodule "$2 $1"    "^fg($TAGCOL)$2^fg() ^fg($SYMCOL)$1^fg()^fg($SYMCOL)^fg()" 13
+	else
+	    outputmodule "$2 $1"gB"" "^fg($TAGCOL)$2^fg() ^fg($INFOCOL)$1^fg()^fg($SYMCOL)gB^fg()" 13
+	fi
+	}
+
+    # wrapper 1
+    case "$HDDCASECOUNTER" in
+	[0-2]) outputdrive $ROOTG $ROOTTAG
+	    ;;
+	[3-5]) outputdrive $HOMEG $HOMETAG
+	    ;;
+    esac
+    # wrapper 2
+    case "$HDDCASECOUNTER" in
+	[0-2]) outputdrive $USB1G $USB1TAG
+	    ;;
+	[3-5]) outputdrive $USB2G $USB2TAG
+	    ;;
+    esac
+
+    if [ "$HDDCASECOUNTER" = "5" ]; then
+	    HDDCASECOUNTER=0
+    else HDDCASECOUNTER=$(($HDDCASECOUNTER + 1))
+    fi
+}
+#====================================================================================
+# VOL
+#====================================================================================
+VOL=""      # current volume
+VOLSTATE="" # state (on/off)
+
+
+function update_volume_data {
+    
+    VOL=$(amixer -M sget Master | grep Mono: | awk '{print $4 $6}' | sed 's/[^0-9a-zA]*//g')
+    VOLSTATE=$(echo $VOL | sed 's/[^a-z]*//g')
+    VOL=$(echo $VOL | sed 's/[^0-9]*//g')
+    
+}
+
+function output_volume_data {
+    outputlabel "VOL:"
+    outputmodule "$VOL $VOLSTATE" "$VOL ^fg($SYMCOL) $VOLSTATE" 6
+}
+
+# TODO
+#   echo -n "^bg($WRAPCOL)^fg(#707070)^r("$ACTIVE"x6)^fg($BGCOL)^r("$INACTIVE"x6)^fg($INFOCOL) $VOL^fg()^bg()" # main area
+#   ACTIVE=$(($VOL / 2))
+#   INACTIVE=$(($BARLENGTH-$ACTIVE))
+
+#====================================================================================
+# THE LOOP
+#====================================================================================
+
+# loop every second
+UPDATE=1
+
+while :; do
+    update_volume_data
+    update_net_data
+    update_mpd_data
+    update_system_data
+    update_hdd_data
+    
+    output_mpd_data
+    output_system_data
+    output_net_data
+    output_hdd_data
+    output_volume_data
+
+    sleep $UPDATE
+    echo "" # newline, as required by dzen2
+
+done | dzen2 -x 0 -y 1034 -h $ZENHEIGHT -ta l -w $ZENWIDTH -fg $INFOCOL -bg $BGCOL -fn "$FONT"
